@@ -9,11 +9,14 @@ import { PageHeader, TrendChart, NivelBadge } from '@/components/parts'
 import { NoPersona } from '@/views/Inicio'
 import { T, ORDER, interp, nf, fmt, hoy, detalle, edad } from '@/lib/domain'
 import { informeHTML, informeTexto, promptIA } from '@/lib/report'
-import { Download, Copy, Sparkles } from 'lucide-react'
+import { Download, Copy, Sparkles, Trash2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { toast } from 'sonner'
 
 export default function Informe({ persona, res, notas }) {
   const S = useStore()
   const [ini, setIni] = React.useState(true)
+  const [borrar, setBorrar] = React.useState(null)
   const prompt = React.useMemo(() => (persona ? promptIA(persona, res, notas, S.cfg, ini) : ''), [persona, res, notas, S.cfg, ini])
   const desc = 'Resumen de todas las pruebas y del diario. Descárguelo para imprimirlo o enviárselo al médico.'
   if (!persona) return <><PageHeader title="Informe para el médico" desc={desc} /><NoPersona /></>
@@ -40,10 +43,10 @@ export default function Informe({ persona, res, notas }) {
             <h3 className="mb-2 text-xl font-bold">Resultados</h3>
             {res.length ? (
               <Table>
-                <TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Prueba</TableHead><TableHead className="text-right">Puntaje</TableHead><TableHead>Interpretación</TableHead><TableHead className="min-w-[220px]">Detalle</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Fecha</TableHead><TableHead>Prueba</TableHead><TableHead className="text-right">Puntaje</TableHead><TableHead>Interpretación</TableHead><TableHead className="min-w-[220px]">Detalle</TableHead>{S.own && <TableHead><span className="sr-only">Acciones</span></TableHead>}</TableRow></TableHeader>
                 <TableBody>
                   {[...res].reverse().map((x) => { const t = T[x.tipo], i = interp(x.tipo, x.puntaje); return (
-                    <TableRow key={x.id}><TableCell className="whitespace-nowrap tabular-nums">{fmt(x.fecha)}</TableCell><TableCell className="whitespace-nowrap font-bold">{t.n}</TableCell><TableCell className="whitespace-nowrap text-right tabular-nums">{nf(x.puntaje, t.dec)} / {t.max}</TableCell><TableCell><NivelBadge n={i[0]} /></TableCell><TableCell className="text-muted-foreground">{detalle(x)}</TableCell></TableRow>
+                    <TableRow key={x.id}><TableCell className="whitespace-nowrap tabular-nums">{fmt(x.fecha)}</TableCell><TableCell className="whitespace-nowrap font-bold">{t.n}</TableCell><TableCell className="whitespace-nowrap text-right tabular-nums">{nf(x.puntaje, t.dec)} / {t.max}</TableCell><TableCell><NivelBadge n={i[0]} /></TableCell><TableCell className="text-muted-foreground">{detalle(x)}</TableCell>{S.own && <TableCell className="p-1"><Button variant="ghost" size="icon" aria-label={`Borrar resultado de ${t.n} del ${fmt(x.fecha)}`} onClick={() => setBorrar(x)}><Trash2 className="text-muted-foreground" /></Button></TableCell>}</TableRow>
                   ) })}
                 </TableBody>
               </Table>
@@ -55,6 +58,13 @@ export default function Informe({ persona, res, notas }) {
           </div>
         </CardContent>
       </Card>
+      <Dialog open={!!borrar} onOpenChange={(o) => !o && setBorrar(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>¿Borrar este resultado?</DialogTitle><DialogDescription>{borrar && `${T[borrar.tipo].n} del ${fmt(borrar.fecha)} · puntaje ${nf(borrar.puntaje, T[borrar.tipo].dec)}`}</DialogDescription></DialogHeader>
+          <p>Úselo solo si el resultado quedó mal registrado. No se puede deshacer.</p>
+          <DialogFooter><Button variant="outline" onClick={() => setBorrar(null)}>Cancelar</Button><Button variant="destructive" onClick={async () => { const b = borrar; setBorrar(null); await S.del('resultados', b.id); toast.success('Resultado borrado.') }}><Trash2 />Borrar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Card className="border-primary/30">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-2xl"><Sparkles className="h-6 w-6 text-primary" />Evaluación con IA</CardTitle>

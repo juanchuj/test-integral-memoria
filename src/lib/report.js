@@ -1,4 +1,4 @@
-import { T, ORDER, NIV, interp, esc, fmt, hoy, nf, detalle, chartSVG, lines, DEF, SAGE_SC, sOpts, sageMax, edad } from './domain'
+import { T, ORDER, NIV, interp, esc, fmt, hoy, nf, detalle, chartSVG, lines, DEF, SAGE_SC, sageMax, edad, npLista } from './domain'
 
 const byTipo = (res, t) => res.filter((r) => r.tipo === t)
 
@@ -8,11 +8,11 @@ export function informeHTML(p, res, notas) {
   const filas = [...res].reverse().map((x) => { const t = T[x.tipo], i = interp(x.tipo, x.puntaje); return `<tr><td style="white-space:nowrap">${fmt(x.fecha)}</td><td>${t.n}</td><td class="num">${nf(x.puntaje, t.dec)} / ${t.max}</td><td class="${i[0]}">${NIV[i[0]]}</td><td>${esc(detalle(x))}</td></tr>` }).join('')
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Informe de chequeo de memoria – ${esc(p.nombre)}</title><style>${css}</style></head><body>
 <h1>Informe de chequeo de memoria</h1>
-<p><b>${esc(p.nombre)}</b>${p.nac ? ` · nacido en ${esc(p.nac)}` : ''}${p.estudio ? ` · ${esc(p.estudio)} años de estudio` : ''}${p.nota ? ` · ${esc(p.nota)}` : ''}<br><span class="mut">Generado el ${fmt(hoy())}. Pruebas de tamizaje aplicadas por la familia; no constituyen un diagnóstico.</span></p>
+<p><b>${esc(p.nombre)}</b>${p.nac ? ` · año de nacimiento ${esc(p.nac)}` : ''}${p.estudio ? ` · ${esc(p.estudio)} años de estudio` : ''}${p.nota ? ` · ${esc(p.nota)}` : ''}<br><span class="mut">Generado el ${fmt(hoy())}. Pruebas de tamizaje aplicadas por la familia; no constituyen un diagnóstico.</span></p>
 <h2>Tendencias</h2><div class="g">${ORDER.map((k) => `<div><b>${T[k].n}</b><br>${chartSVG(byTipo(res, k), T[k], 420, 140)}</div>`).join('')}</div>
 <h2>Resultados</h2>${res.length ? `<table><thead><tr><th>Fecha</th><th>Prueba</th><th class="num">Puntaje</th><th>Interpretación</th><th>Detalle</th></tr></thead><tbody>${filas}</tbody></table>` : '<p>Sin resultados registrados.</p>'}
 <h2>Diario de observaciones</h2>${n.length ? n.map((x) => `<div class="n"><b>${fmt(x.fecha)} · ${esc(x.area)}</b>${x.obs ? ` <span class="mut">(${esc(x.obs)})</span>` : ''}<br>${esc(x.texto)}</div>`).join('') : '<p>Sin observaciones.</p>'}
-<h2>Rangos de referencia</h2><p class="mut">AD8: 0–1 cognición normal; 2 o más, posible deterioro. IQCODE: promedio ≥ 3,31 zona de alerta, &gt; 3,6 sugiere deterioro. SAGE: 17 o más se considera normal (hoja oficial); en los estudios de validación 15–16 corresponde a deterioro leve y ≤ 14 a demencia. Mini-Cog: menor de 3 es el corte para detección de demencia; menor de 4 si se desea mayor sensibilidad.</p>
+<h2>Rangos de referencia</h2><p class="mut">AD8: 0–1 cognición normal; 2 o más, posible deterioro. IQCODE (versión española de 17 ítems): promedio de 3,31 a 3,43 zona de alerta (cortes de la validación española); 3,44 o más supera el corte recomendado para versiones cortas. SAGE: 17 o más se considera normal (hoja oficial); en los estudios de validación 15–16 corresponde a deterioro leve y ≤ 14 a demencia. Mini-Cog: menor de 3 es el corte para detección de demencia; menor de 4 si se desea mayor sensibilidad.</p>
 </body></html>`
 }
 
@@ -36,6 +36,7 @@ export function promptIA(p, res, notas, cfg, iniciales) {
     if (r.tipo === 'sage') {
       s += `Forma ${e.forma}${e.min ? ` · tardó ${e.min} min` : ''}\n`
       if (e.items) SAGE_SC.forEach((i) => { s += `- ${i.g}: ${e.items[i.id]} de ${sageMax(i, e.forma)}\n` })
+      const np = npLista(e.np); if (np.length) s += `Preguntas sin puntaje (respuestas de la persona):\n${np.map((x) => `- ${x}`).join('\n')}\n`
     }
     if (r.tipo === 'minicog') {
       const w = (lines(cfg.mc_lists)[e.version - 1] || '').split(/[,;]/).map((x) => x.trim())
@@ -59,11 +60,11 @@ Actúa como un equipo clínico formado por un neurólogo cognitivo, un geriatra 
 - Edad: ${ed ? ed + ' años' : 'no indicada'}
 - Años de estudio: ${p.estudio || 'no indicado'}
 - Antecedentes y notas de la familia: ${p.nota || 'ninguna'}
-- Contexto: vive en Colombia (Eje Cafetero). Hay antecedentes familiares de problemas de salud mental serios, entre ellos Alzheimer. Algunos médicos lo han revisado solo con entrevista y dicen que no tiene nada; la familia cercana nota cambios sutiles.
+- País: Colombia. Ten en cuenta el sistema de salud colombiano (EPS, remisiones) al recomendar pasos.
 
 ## Pruebas aplicadas y rangos de referencia
 - AD8 (informante, 8 ítems): 0–1 cognición normal; 2 o más, posible deterioro.
-- IQCODE versión española de Del Ser, Morales y Bermejo (informante, ${iqi.length || 17} ítems, escala 1–5 comparando con hace 10 años): se reportan suma y promedio.
+- IQCODE versión española corta de Del Ser, Morales y Bermejo (informante, ${iqi.length || 17} ítems, escala 1–5 comparando con hace 10 años): se reportan suma y promedio. La app usa como zona de alerta un promedio de 3,31 a 3,43 y como alerta 3,44 o más.
 - SAGE (autoadministrada, 0–22): 17 o más se considera normal.
 - Mini-Cog (0–5): corte < 3 para detección de demencia; < 4 cuando se busca mayor sensibilidad.
 
@@ -78,7 +79,7 @@ ${n.map((x) => `- ${fmt(x.fecha)} · ${x.area}: ${x.texto}`).join('\n') || 'Sin 
 2. **Interpretación por prueba y en conjunto**: tendencia en el tiempo, concordancia entre lo que reportan los familiares (AD8, IQCODE) y el desempeño de la persona (SAGE, Mini-Cog), dominios más afectados (memoria, orientación, función ejecutiva, lenguaje, función diaria), y factores que pueden alterar los puntajes (escolaridad, ánimo, audición, visión, sueño, medicamentos).
 3. **Qué hacer con el médico**: especialista al que debe ir, exámenes que conviene pedir (evaluación neuropsicológica completa, laboratorios para causas reversibles, neuroimagen, biomarcadores en sangre como p-tau217 y su disponibilidad real en Colombia), una lista de preguntas para llevar a la consulta y señales de alarma que justifican consulta urgente.
 4. **Plan para prevenir o ralentizar**: basado en el informe 2024 de la Comisión Lancet sobre demencia (14 factores de riesgo modificables) y en ensayos de intervención multidominio como FINGER y U.S. POINTER. Convierte la evidencia en un plan semanal concreto y realista para esta persona: ejercicio, estimulación cognitiva, vida social, sueño, alimentación (dieta MIND o mediterránea), audición, visión, presión arterial, colesterol, glucosa, alcohol, tabaco y ánimo.
-5. **Cómo hablarle a él**: cómo plantear el tema con dignidad, cómo manejar la anosognosia si la hubiera, y cómo cuidar también a la esposa como cuidadora principal.
+5. **Cómo hablar con la persona**: cómo plantear el tema con dignidad, cómo manejar la anosognosia si la hubiera, y cómo cuidar también a la pareja o cuidador principal.
 6. **Planeación temprana en Colombia**: decisiones legales y financieras mientras la persona puede decidir plenamente (por ejemplo, la Ley 1996 de 2019 sobre apoyos y directivas anticipadas), explicado en términos sencillos.
 7. **Recursos verificados**: entre 8 y 12 fuentes confiables con enlace (OMS, Alzheimer's Association en español, National Institute on Aging en español, Alzheimer's Disease International, la Comisión Lancet 2024, el Grupo de Neurociencias de Antioquia, asociaciones colombianas de Alzheimer), y de 3 a 6 **videos en español** de canales institucionales o médicos reconocidos sobre prevención, ejercicios y cuidado. Para cada recurso: título, enlace, de quién es y por qué vale la pena.
 8. **Próximo seguimiento**: qué repetir, cuándo, y qué cambio en los puntajes debería motivar una nueva consulta.

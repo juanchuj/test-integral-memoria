@@ -5,7 +5,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { T, NIV, interp, nf, fmt, mas6 } from '@/lib/domain'
 import { cn } from '@/lib/utils'
-import { Play, RotateCcw, Pause, FileDown, User, Users, Clock } from 'lucide-react'
+import { Play, RotateCcw, Pause, FileDown, User, Users, Clock, Download } from 'lucide-react'
+import { useStore, saveFile } from '@/lib/store'
+import { hoy } from '@/lib/domain'
 
 export function NivelBadge({ n, className }) {
   return <Badge variant={n} className={className}>{NIV[n]}</Badge>
@@ -79,7 +81,7 @@ export function OptionGroup({ options, value, onChange, label, className }) {
   )
 }
 
-export function Stopwatch() {
+export function Stopwatch({ limite }) {
   const [t0, setT0] = React.useState(null)
   const [acc, setAcc] = React.useState(0)
   const [, tick] = React.useState(0)
@@ -99,6 +101,7 @@ export function Stopwatch() {
         ? <Button onClick={parar}><Pause />Parar</Button>
         : <Button variant="outline" onClick={iniciar}><Play />Iniciar</Button>}
       <Button variant="ghost" onClick={reiniciar} disabled={!s && !corriendo}><RotateCcw />Reiniciar</Button>
+      {limite && s >= limite && <p role="status" className="basis-full rounded-md border border-warning/40 bg-warning/10 px-3 py-2 font-bold text-warning">Pasaron {Math.round(limite / 60)} minutos: continúe al paso siguiente.</p>}
     </div>
   )
 }
@@ -112,7 +115,7 @@ export function StickyBar({ children }) {
 }
 
 export function PdfButton({ href, children, variant = 'outline' }) {
-  return <Button asChild variant={variant}><a href={href} target="_blank" rel="noopener"><FileDown />{children}</a></Button>
+  return <Button asChild variant={variant} className="h-auto min-h-12 whitespace-normal py-2.5 text-left"><a href={href} target="_blank" rel="noopener"><FileDown />{children}</a></Button>
 }
 
 export function Step({ n, title, children }) {
@@ -130,6 +133,7 @@ export function Instr({ children }) {
 }
 
 export function ResultDialog({ result, persona, onClose, go }) {
+  const S = useStore()
   if (!result) return null
   const t = T[result.tipo], i = interp(result.tipo, result.puntaje)
   return (
@@ -145,8 +149,9 @@ export function ResultDialog({ result, persona, onClose, go }) {
           <NivelBadge n={i[0]} className="mb-1.5 text-base" />
         </div>
         <p className="text-lg">{i[1]}</p>
-        <Card className="bg-muted/60"><CardContent className="p-4 text-[15px] text-muted-foreground sm:p-4">Una sola prueba no es un diagnóstico. Repítala en 6 meses (próxima: <b className="text-foreground">{fmt(mas6(result.fecha))}</b>) y lleve el informe al médico.</CardContent></Card>
-        <DialogFooter>
+        <Card className="bg-muted/60"><CardContent className="p-4 text-[15px] text-muted-foreground sm:p-4">Una sola prueba no es un diagnóstico. Repítala en 6 meses (próxima: <b className="text-foreground">{fmt(mas6(result.fecha))}</b>) y lleve el informe al médico.{!S.own && <> El resultado quedó guardado solo en este dispositivo: exporte el respaldo y envíeselo a quien administra la app.</>}</CardContent></Card>
+        <DialogFooter className="sm:flex-wrap">
+          <Button variant="outline" onClick={() => saveFile(`test-memoria-${hoy()}.json`, JSON.stringify(S.exportar(), null, 1), 'Respaldo descargado.')}><Download />Exportar respaldo</Button>
           <Button variant="outline" onClick={() => { onClose(); go('informe') }}>Ver informe</Button>
           <Button onClick={() => { onClose(); go('inicio') }}>Ver el tablero</Button>
         </DialogFooter>

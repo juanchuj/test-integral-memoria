@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageHeader, OptionGroup, StickyBar, NivelBadge, PdfButton, Stopwatch, Step, Instr, Empty } from '@/components/parts'
 import { NoPersona } from '@/views/Inicio'
-import { T, interp, lines, DEF, hoy, nf, SAGE_URL, SAGE_SC, sOpts, mcLists } from '@/lib/domain'
+import { T, interp, lines, DEF, hoy, nf, SAGE_URL, SAGE_SC, SAGE_NP, sOpts, mcLists } from '@/lib/domain'
 import { cn } from '@/lib/utils'
 import { FileWarning, Save, Loader2 } from 'lucide-react'
 
@@ -52,7 +52,7 @@ export function Questionnaire({ k, persona, draft, setDraft, save }) {
   const opts = lines(cfg[isA ? 'ad8_opts' : 'iq_opts'] || DEF[isA ? 'ad8_opts' : 'iq_opts'])
   const need = isA ? 8 : items.length === 17 ? 17 : 16
   const desc = isA
-    ? 'Lo llena un familiar que conozca bien a la persona (idealmente la pareja), sin que la persona esté presente.'
+    ? 'Lo llena un familiar que conozca bien a la persona (idealmente la pareja), sin que ella esté presente. Si no hay un familiar disponible, la puede responder la propia persona, calificando los cambios en sus capacidades.'
     : 'Lo llena un familiar que haya convivido con la persona en los últimos 10 años. Compara cómo está ahora con cómo era hace 10 años.'
   if (!persona) return <><PageHeader title={t.n} desc={desc} test={t} /><NoPersona /></>
   if (items.length !== need || opts.length !== (isA ? 3 : 5)) return <><PageHeader title={t.n} desc={desc} test={t} /><FaltaTexto campo={t.n} n={need} /></>
@@ -69,21 +69,25 @@ export function Questionnaire({ k, persona, draft, setDraft, save }) {
     txt = v.length ? `Promedio ${nf(m, 2)} · suma ${suma}` : 'Sin respuestas'; extra = { respondidas: v.length, total: need, suma }
   }
   const nivel = ok ? interp(k, puntaje)[0] : null
-  const setAns = (i, j) => { const a = [...ans]; a[i] = j; setDraft({ ans: a }) }
+  const setAns = (i, j) => {
+    const a = [...ans]; const nueva = a[i] === null; a[i] = j; setDraft({ ans: a })
+    const sig = a.findIndex((v, n) => n > i && v === null)
+    if (nueva && sig > -1) setTimeout(() => document.getElementById(`${k}-q${sig}`)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }), 120)
+  }
   return (
     <div>
       <PageHeader title={t.n} desc={desc} test={t} />
       <Card className="mb-6">
         <CardContent className="grid gap-4 pt-5 sm:grid-cols-2 sm:pt-6">
           <FechaField id="f-fecha" value={fecha} onChange={(v) => setDraft({ fecha: v })} />
-          <div className="space-y-2"><Label htmlFor="f-inf">Quién responde (informante)</Label><Input id="f-inf" value={draft.inf || ''} placeholder="Nombre y relación" onChange={(e) => setDraft({ inf: e.target.value })} /></div>
+          <div className="space-y-2"><Label htmlFor="f-inf">Quién responde</Label><Input id="f-inf" value={draft.inf || ''} placeholder={isA ? 'Nombre y relación, o "la propia persona"' : 'Nombre y relación'} onChange={(e) => setDraft({ inf: e.target.value })} /></div>
           {cfg[isA ? 'ad8_instr' : 'iq_instr'] && <div className="sm:col-span-2"><Instr>{cfg[isA ? 'ad8_instr' : 'iq_instr']}</Instr></div>}
           <div className="sm:col-span-2"><PdfButton href={isA ? S.pdf.ad8 : S.pdf.iq}>Formulario oficial (PDF)</PdfButton></div>
         </CardContent>
       </Card>
       <ol className="space-y-3">
         {items.map((q, i) => (
-          <li key={i}>
+          <li key={i} id={`${k}-q${i}`} className="scroll-mt-24">
             <Card className={cn('transition-colors', ans[i] !== null && 'border-primary/40')}>
               <CardContent className="space-y-4 pt-5 sm:pt-6">
                 <p className="text-lg leading-snug sm:text-xl"><span className="mr-2 font-bold text-primary">{i + 1}.</span>{q}</p>
@@ -143,6 +147,17 @@ export function Sage({ persona, res, draft, setDraft, save }) {
           </CardContent>
         </Card>
       </div>
+      <Card className="mt-4">
+        <CardHeader><CardTitle>Preguntas sin puntaje (opcional)</CardTitle><CardDescription className="text-base">Copie lo que la persona marcó en la primera página. No suman puntos, pero el ánimo, un derrame o los antecedentes pueden afectar el resultado y le sirven al médico.</CardDescription></CardHeader>
+        <CardContent className="space-y-5">
+          {SAGE_NP.map((q) => (
+            <div key={q.id} className="space-y-2">
+              <p className="text-[17px]">{q.q}</p>
+              <OptionGroup label={q.q} options={q.o} value={(draft.np || {})[q.id]} onChange={(v) => setDraft((d) => ({ ...d, np: { ...(d.np || {}), [q.id]: (d.np || {})[q.id] === v ? undefined : v } }))} />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
       <div className="mb-4 mt-10 flex flex-col gap-1">
         <h2 className="text-2xl font-bold">Calificar ítem por ítem</h2>
         <p className="text-muted-foreground">Criterios de la hoja oficial de puntuación. La memoria (ítem 6) se califica en el ítem 12.</p>
@@ -162,7 +177,7 @@ export function Sage({ persona, res, draft, setDraft, save }) {
       </ol>
       <StickyBar>
         <ScoreLine text={`Total ${total} / 22`} nivel={ok ? interp('sage', total)[0] : null} sub={<div className="flex max-w-xs items-center gap-3"><Progress value={(k / SAGE_SC.length) * 100} /><span className="whitespace-nowrap text-sm text-muted-foreground">{k}/{SAGE_SC.length} ítems</span></div>} />
-        <SaveButton ok={ok} onSave={() => save({ tipo: 'sage', fecha, puntaje: total, extra: { forma: +forma, items: { ...sc }, min: draft.min ? +draft.min : null } })} />
+        <SaveButton ok={ok} onSave={() => save({ tipo: 'sage', fecha, puntaje: total, extra: { forma: +forma, items: { ...sc }, min: draft.min ? +draft.min : null, np: Object.fromEntries(Object.entries(draft.np || {}).filter(([, v]) => v)) } })} />
       </StickyBar>
     </div>
   )
@@ -200,7 +215,7 @@ export function MiniCog({ persona, res, draft, setDraft, save }) {
         <Card><CardContent className="pt-5 sm:pt-6"><Step n={2} title="Dibujo de reloj">
           <Instr>{cfg.mc_instr_clock}</Instr>
           <PdfButton href={S.pdf.mc}>Imprimir página del círculo (PDF, pág. 2)</PdfButton>
-          <Stopwatch />
+          <Stopwatch limite={180} />
           <div className="space-y-3 pt-2"><p className="font-bold">Calificación del reloj</p><Instr>{cfg.mc_clock_score}</Instr>
             <OptionGroup label="Calificación del reloj" options={[[2, 'Normal · 2 puntos'], [0, 'Anormal · 0 puntos']]} value={reloj} onChange={(x) => setDraft({ reloj: x })} />
           </div>

@@ -4,13 +4,13 @@ export const T = {
   sage: { k: 'sage', n: 'SAGE', quien: 'persona', sub: 'En papel, la hace la persona sola', dur: '15 min', min: 0, max: 22, dec: 0, bands: [[0, 14.5, 'alerta'], [14.5, 16.5, 'gris'], [16.5, 22, 'ok']] },
   minicog: { k: 'minicog', n: 'Mini-Cog', quien: 'persona', sub: 'La aplica un familiar a la persona', dur: '3 min', min: 0, max: 5, dec: 0, bands: [[0, 2.5, 'alerta'], [2.5, 3.5, 'gris'], [3.5, 5, 'ok']] },
   ad8: { k: 'ad8', n: 'AD8', quien: 'familiar', sub: 'La responde un familiar cercano', dur: '3 min', min: 0, max: 8, dec: 0, bands: [[0, 1.5, 'ok'], [1.5, 8, 'alerta']] },
-  iqcode: { k: 'iqcode', n: 'IQCODE', quien: 'familiar', sub: 'La responde un familiar cercano', dur: '10 min', min: 1, max: 5, dec: 2, bands: [[1, 3.31, 'ok'], [3.31, 3.6, 'gris'], [3.6, 5, 'alerta']] },
+  iqcode: { k: 'iqcode', n: 'IQCODE', quien: 'familiar', sub: 'La responde un familiar cercano', dur: '10 min', min: 1, max: 5, dec: 2, bands: [[1, 3.31, 'ok'], [3.31, 3.44, 'gris'], [3.44, 5, 'alerta']] },
 }
 export const ORDER = ['sage', 'minicog', 'ad8', 'iqcode']
 
 export function interp(t, s) {
-  if (t === 'ad8') return s >= 2 ? ['alerta', '2 o superior: es posible que exista deterioro cognitivo. Conviene evaluación médica.'] : ['ok', '0 a 1: cognición normal según el AD8.']
-  if (t === 'iqcode') return s > 3.6 ? ['alerta', 'Promedio mayor de 3,6: sugiere deterioro significativo. Conviene evaluación médica.'] : s >= 3.31 ? ['gris', 'Promedio entre 3,31 y 3,6: zona de alerta. Repetir y comentar con el médico.'] : ['ok', 'Promedio menor de 3,31: sin indicio de deterioro.']
+  if (t === 'ad8') return s >= 2 ? ['alerta', '2 o superior: es posible que exista deterioro cognitivo. Indica la necesidad de realizar otras evaluaciones.'] : ['ok', '0 a 1: cognición normal. Sugiere que la demencia es improbable, aunque no descarta un proceso en etapa muy temprana.']
+  if (t === 'iqcode') return s >= 3.44 ? ['alerta', 'Promedio de 3,44 o más: supera el punto de corte recomendado para las versiones cortas del IQCODE. Conviene evaluación médica.'] : s >= 3.31 ? ['gris', 'Promedio entre 3,31 y 3,43: alcanza los cortes de la validación española (3,27 a 3,31). Repetir y comentar con el médico.'] : ['ok', 'Promedio menor de 3,31: por debajo de los puntos de corte; sin indicio de deterioro.']
   if (t === 'sage') return s <= 14 ? ['alerta', '14 o menos: por debajo de lo normal; en los estudios de validación, rango de demencia. Conviene evaluación médica.'] : s <= 16 ? ['gris', '15 a 16: por debajo de lo normal; en los estudios de validación, rango de deterioro cognitivo leve. Comentar con el médico.'] : ['ok', '17 o más: se considera normal según la hoja oficial.']
   if (t === 'minicog') return s <= 2 ? ['alerta', 'Menor de 3: valor de corte de la Mini-Cog para la detección de demencia. Conviene evaluación médica.'] : s === 3 ? ['gris', 'Menor de 4: con el corte de mayor sensibilidad, podría indicar la necesidad de evaluaciones adicionales.'] : ['ok', '4 a 5: sin indicio de deterioro según la Mini-Cog.']
   return ['ok', '']
@@ -40,6 +40,20 @@ export const SAGE_SC = [
     ? [[2, '2 = redacción exacta únicamente, nada adicional: “Terminé”'], [1, '1 = debe contener la palabra “terminar”: “Sí, terminé”, “terminado”, otros'], [0, '0 = todo lo demás']]
     : [[2, '2 = redacción exacta únicamente, nada adicional: “He finalizado”'], [1, '1 = debe contener la palabra “finalizar”: “Sí, he finalizado”, “Finalicé”, otros'], [0, '0 = todo lo demás']] },
 ]
+const SN = [['si', 'Sí'], ['no', 'No']], SON = [['si', 'Sí'], ['ocasional', 'Solo ocasionalmente'], ['no', 'No']]
+export const SAGE_NP = [
+  { id: 'memoria', q: '¿Ha tenido algún problema con su memoria o razonamiento?', o: SON },
+  { id: 'pariente', q: '¿Ha tenido algún pariente consanguíneo que haya tenido problemas con la memoria o el razonamiento?', o: SN },
+  { id: 'equilibrio', q: '¿Tiene problemas de equilibrio?', o: SN },
+  { id: 'derrame', q: '¿Alguna vez tuvo un derrame cerebral importante?', o: SN },
+  { id: 'derrame_menor', q: '¿Un derrame cerebral minúsculo o sin importancia?', o: SN },
+  { id: 'triste', q: '¿Actualmente se siente triste o deprimido?', o: SON },
+  { id: 'personalidad', q: '¿Ha tenido algún cambio en su personalidad?', o: SN },
+  { id: 'actividades', q: '¿Tiene más dificultades haciendo actividades diarias debido a problemas para pensar?', o: SN },
+]
+const NP_TXT = { si: 'Sí', no: 'No', ocasional: 'Solo ocasionalmente' }
+export const npResumen = (np) => SAGE_NP.filter((i) => np?.[i.id] && np[i.id] !== 'no').map((i) => `${i.q.replace(/^¿|\?$/g, '')}: ${NP_TXT[np[i.id]]}`)
+export const npLista = (np) => SAGE_NP.filter((i) => np?.[i.id]).map((i) => `${i.q} ${NP_TXT[np[i.id]]}`)
 export const sOpts = (it, f) => (typeof it.o === 'function' ? it.o(f) : it.o)
 export const sageMax = (it, f) => Math.max(...sOpts(it, f).map((o) => o[0]))
 export function sageGrupos(items) {
@@ -62,7 +76,7 @@ export function detalle(x) {
   const e = x.extra || {}
   if (x.tipo === 'ad8') return `Informante: ${x.inf || '—'}${e.noSabe ? ` · "No sé": ${e.noSabe}` : ''}`
   if (x.tipo === 'iqcode') return `Informante: ${x.inf || '—'} · ${e.respondidas} de ${e.total || 16} respondidas${e.suma ? ` · suma ${e.suma}` : ''}`
-  if (x.tipo === 'sage') return `Forma ${e.forma}${e.items ? ' · ' + sageGrupos(e.items) : e.raw != null ? ` · total ${e.raw}` : ''}${e.min ? ` · ${e.min} min` : ''}`
+  if (x.tipo === 'sage') { const f = npResumen(e.np); return `Forma ${e.forma}${e.items ? ' · ' + sageGrupos(e.items) : e.raw != null ? ` · total ${e.raw}` : ''}${e.min ? ` · ${e.min} min` : ''}${f.length ? ' · Respondió sí: ' + f.join('; ') : ''}` }
   if (x.tipo === 'minicog') return `Versión ${e.version} · palabras ${e.palabras}/3 · reloj ${e.reloj}/2`
   return ''
 }

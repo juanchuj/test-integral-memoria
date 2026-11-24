@@ -124,7 +124,8 @@ export default function App() {
   const S = useStore()
   const [view, setView] = React.useState(readHash)
   const [cur, setCur] = React.useState(() => ls.get('cm-persona'))
-  const [drafts, setDrafts] = React.useState({})
+  const [allDrafts, setAllDrafts] = React.useState(() => { try { return JSON.parse(ls.get('test-integral-memoria-borradores') || '{}') } catch (e) { return {} } })
+  React.useEffect(() => { ls.set('test-integral-memoria-borradores', JSON.stringify(allDrafts)) }, [allDrafts])
   const [result, setResult] = React.useState(null)
   const [splash, setSplash] = React.useState(() => ls.get('cm-splash') !== 'no')
 
@@ -135,7 +136,9 @@ export default function App() {
   const persona = personas.find((p) => p.id === cur) || personas[0] || null
   const pid = persona?.id || null
   React.useEffect(() => { if (pid && pid !== cur) setCur(pid) }, [pid])
-  const pickPersona = (id) => { setCur(id); ls.set('cm-persona', id); setDrafts({}) }
+  const pickPersona = (id) => { setCur(id); ls.set('cm-persona', id) }
+  const drafts = allDrafts[pid] || {}
+  const setDrafts = (fn) => setAllDrafts((all) => ({ ...all, [pid]: fn(all[pid] || {}) }))
 
   const vista = view
   const res = React.useMemo(() => S.resultados.filter((r) => r.persona === pid).sort((a, b) => (a.fecha + (a.creado || '')).localeCompare(b.fecha + (b.creado || ''))), [S.resultados, pid])
@@ -146,7 +149,7 @@ export default function App() {
   const saveResult = async (rec) => {
     const full = { ...rec, persona: pid, creado: new Date().toISOString() }
     await S.put('resultados', uid(), full)
-    setDrafts((d) => ({ ...d, [rec.tipo]: undefined }))
+    setDrafts((d) => { const n = { ...d }; delete n[rec.tipo]; return n })
     setResult(full)
   }
   const common = { persona, res, notas, go }
