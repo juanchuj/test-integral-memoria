@@ -1,0 +1,5 @@
+node_modules/
+dist/
+# Originales con derechos de autor: NO se suben. Solo se sube la versión cifrada (public/contenido.enc.json).
+contenido/
+.DS_Store

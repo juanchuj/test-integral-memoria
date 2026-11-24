@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --background: 0 0% 100%;
+    --foreground: 210 32% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 32% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 32% 13%;
+    --primary: 193 72% 21%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 190 30% 95%;
+    --secondary-foreground: 193 72% 18%;
+    --muted: 190 25% 96%;
+    --muted-foreground: 210 12% 38%;
+    --accent: 190 35% 93%;
+    --accent-foreground: 193 72% 18%;
+    --destructive: 352 54% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 171 60% 28%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 100% 33%;
+    --warning-foreground: 0 0% 100%;
+    --border: 192 22% 87%;
+    --input: 192 18% 80%;
+    --ring: 193 72% 30%;
+    --hero: 193 72% 21%;
+    --hero-foreground: 0 0% 100%;
+    --radius: 0.85rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme=light]) { --dark: 1; }
+  }
+  :root[data-theme=dark] { --dark: 1; }
+}
+@layer base {
+  :root[data-theme=dark], :root[data-theme=dark] body { color-scheme: dark; }
+  :root[data-theme=dark] {
+    --background: 200 30% 7%; --foreground: 195 20% 92%; --card: 200 26% 10%; --card-foreground: 195 20% 92%;
+    --popover: 200 26% 10%; --popover-foreground: 195 20% 92%; --primary: 192 50% 60%; --primary-foreground: 200 30% 8%;
+    --secondary: 200 22% 15%; --secondary-foreground: 195 20% 92%; --muted: 200 22% 14%; --muted-foreground: 200 12% 68%;
+    --accent: 200 22% 17%; --accent-foreground: 195 20% 92%; --destructive: 352 78% 70%; --destructive-foreground: 200 30% 8%;
+    --success: 168 45% 56%; --success-foreground: 200 30% 8%; --warning: 43 80% 60%; --warning-foreground: 200 30% 8%;
+    --border: 200 20% 20%; --input: 200 18% 26%; --ring: 192 50% 60%; --hero: 196 55% 14%; --hero-foreground: 195 20% 94%;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme=light]) {
+      color-scheme: dark;
+      --background: 200 30% 7%; --foreground: 195 20% 92%; --card: 200 26% 10%; --card-foreground: 195 20% 92%;
+      --popover: 200 26% 10%; --popover-foreground: 195 20% 92%; --primary: 192 50% 60%; --primary-foreground: 200 30% 8%;
+      --secondary: 200 22% 15%; --secondary-foreground: 195 20% 92%; --muted: 200 22% 14%; --muted-foreground: 200 12% 68%;
+      --accent: 200 22% 17%; --accent-foreground: 195 20% 92%; --destructive: 352 78% 70%; --destructive-foreground: 200 30% 8%;
+      --success: 168 45% 56%; --success-foreground: 200 30% 8%; --warning: 43 80% 60%; --warning-foreground: 200 30% 8%;
+      --border: 200 20% 20%; --input: 200 18% 26%; --ring: 192 50% 60%; --hero: 196 55% 14%; --hero-foreground: 195 20% 94%;
+    }
+  }
+  * { @apply border-border; min-width: 0; }
+  html, body { margin: 0; }
+  body { @apply bg-background text-foreground font-sans antialiased; font-size: 17px; line-height: 1.55; overflow-x: clip; }
+  h1, h2, h3 { letter-spacing: -0.02em; text-wrap: balance; }
+  svg text { font-family: "Atkinson Hyperlegible", system-ui, sans-serif; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+}
